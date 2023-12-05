@@ -20,3 +20,87 @@ services:
     ports:
     - "5672:5672"
     
+  account:
+    build:
+      context: .
+      dockerfile: ./apps/account/Dockerfile
+    command: npm run start:dev account
+    depends_on: 
+      db:
+        condition: service_started
+      kafka:
+        condition: service_started
+    environment:
+      DATABASE_URL: postgres://root:root@db:5432/catalog  
+    volumes:
+      - .:/usr/src/app
+      - /usr/src/app/node_modules
+    networks:
+      - catalog  
+
+  cart:
+    build:
+      context: .
+      dockerfile: ./apps/cart/Dockerfile
+    command: npm run start:dev cart
+    depends_on: 
+      - db
+      - kafka
+    environment:
+      DATABASE_URL: postgres://root:root@db:5432/catalog
+    volumes:
+      - .:/usr/src/app
+      - /usr/src/app/node_modules
+    networks:
+      - catalog   
+
+  order:
+    build:
+      context: .
+      dockerfile: ./apps/order/Dockerfile
+    command: npm run start:dev order
+    depends_on: 
+      - db
+      - kafka
+    environment:
+      DATABASE_URL: postgres://root:root@db:5432/catalog
+    volumes:
+      - .:/usr/src/app
+      - /usr/src/app/node_modules
+    networks:
+      - catalog      
+    
+  products:
+    build:
+      context: .
+      dockerfile: ./apps/order/Dockerfile
+    command: npm run start:dev products
+    depends_on: 
+      - db
+      - kafka
+    environment:
+      DATABASE_URL: postgres://root:root@db:5432/catalog
+    volumes:
+      - .:/usr/src/app
+      - /usr/src/app/node_modules
+    networks:
+      - catalog      
+
+  api-gateway:
+    build:
+      context: .
+      dockerfile: ./apps/api-gateway/Dockerfile
+    command: npm run start:dev api-gateway
+    depends_on: 
+      - db
+    ports: 
+      - "3001:3001"
+    volumes:
+      - .:/usr/src/app
+      - /usr/src/app/node_modules
+    networks:
+      - catalog       
+
+networks:
+  catalog:
+    driver:  bridge
