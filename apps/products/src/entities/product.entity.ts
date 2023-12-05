@@ -1,25 +1,17 @@
 import { Directive, Field, ID, ObjectType } from '@nestjs/graphql';
-import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
 
 @ObjectType()
-@Entity('products')
-@Directive('@key(fields: "id")')
-export class ProductEntity {
+@Directive('@shareable')
+export class Product {
+  @Field(() => ID)
+  id: number;
 
-    @Field(() => ID)
-    @PrimaryGeneratedColumn()
-    id: number;
+  @Field()
+  name: string;
 
-    @Field()
-    @Column()
-    name: string;
+  @Field()
+  description: string;
 
-    @Field()
-    @Column()
-    description: string;
-
-    @Field()
-    @Column()
-    price: number;
-
+  @Field()
+  price: number;
 }

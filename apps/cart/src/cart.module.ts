@@ -1,44 +1,46 @@
 import { Module } from '@nestjs/common';
 import { CartService } from './cart.service';
 import { CartResolver } from './cart.resolver';
-import { ApolloFederationDriverConfig, ApolloFederationDriver } from '@nestjs/apollo';
-import { ConfigModule, ConfigService } from '@nestjs/config';
+import {
+  ApolloFederationDriverConfig,
+  ApolloFederationDriver,
+} from '@nestjs/apollo';
+import { ConfigModule } from '@nestjs/config';
 import { GraphQLModule } from '@nestjs/graphql';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { CartEntity } from './entities/cart.entity';
-import { ProductEntity } from 'apps/products/src/entities/product.entity';
-import { UserEntity } from 'apps/account/src/apps/user/entities/user.entity';
-import { OrderEntity } from 'apps/order/src/entities/order.entity';
+import { Cart } from 'libs/db/typeorm/typeorm/cart.entity';
+import { DbModule } from 'libs/db/typeorm/typeorm.module';
+import { JwtStrategy } from 'libs/auth/strategy/jwt.strategy';
+import { ClientsModule, Transport } from '@nestjs/microservices';
+import { UserService } from './user.service';
 
 @Module({
-  imports: [ConfigModule.forRoot({
-    expandVariables: true,
-  }),
-  TypeOrmModule.forRootAsync({
-    imports: [ConfigModule],
-    inject: [ConfigService],
-    useFactory: async (config: ConfigService) => ({
-      type: 'postgres',
-      username: config.get('TYPEORM_USERNAME'),
-      password: config.get('TYPEORM_PASSWORD'),
-      database: config.get('TYPEORM_DATABASE'),
-      port: 5433,
-      name: 'OrderConnection',
-      entities: [CartEntity, OrderEntity, UserEntity, ProductEntity],
-      synchronize: true,
-      autoLoadEntities: true,
-      logging: true,
-    })
-  }),
-  TypeOrmModule.forFeature([CartEntity]),
-  GraphQLModule.forRoot<ApolloFederationDriverConfig>({
-    driver: ApolloFederationDriver,
-    autoSchemaFile: {
-      federation: 2,
-    },
-  }),
+  imports: [
+    ConfigModule.forRoot({
+      expandVariables: true,
+    }),
+    DbModule,
+    ClientsModule.register([
+      {
+        name: 'USER_SERVICE',
+        transport: Transport.RMQ,
+        options: {
+          urls: ['amqp://localhost:5672'],
+          queue: 'user_queue',
+          queueOptions: {
+            durable: false,
+          },
+        },
+      },
+    ]),
+    TypeOrmModule.forFeature([Cart]),
+    GraphQLModule.forRoot<ApolloFederationDriverConfig>({
+      driver: ApolloFederationDriver,
+      autoSchemaFile: {
+        federation: 2,
+      },
+    }),
   ],
-  providers: [CartService, CartResolver],
-  exports: [CartService]
+  providers: [CartService, CartResolver, JwtStrategy, UserService],
 })
 export class CartModule { }

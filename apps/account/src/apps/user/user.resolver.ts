@@ -1,50 +1,53 @@
-import { Resolver, Query, Mutation, Args, ResolveReference } from '@nestjs/graphql';
-import { UserEntity } from './entities/user.entity';
+import {
+  Resolver,
+  Query,
+  Mutation,
+  Args,
+  ResolveReference,
+  Int,
+  ResolveField,
+  Parent,
+} from '@nestjs/graphql';
 import { UserService } from './user.service';
 import { CreateUserInput } from './dto/create-user.input';
-import { LoginResponse } from '../auth/response/login.response';
-import { AuthService } from '../auth/auth.service';
-import { LoginUserInput } from '../auth/dto/login-user.input';
 import { UseGuards } from '@nestjs/common';
-import { GqlAuthGuard } from '../auth/guards/gql-auth.guard';
-import { CurrentUser } from '../auth/decorator/current-user.decorator';
-import { GetUserArgs } from './dto/get-user.args';
 
-@Resolver(() => UserEntity)
+import { User, Role } from './entities/user.entity';
+import { CurrentUser } from 'libs/auth/decorator/current-user.decorator';
+import { Roles } from 'libs/auth/decorator/role.decorator';
+import { GqlAuthGuard } from 'libs/auth/guards/gql-auth.guard';
+import { RolesGuard } from 'libs/auth/guards/role.guard';
+
+@Resolver(() => User)
 export class UserResolver {
-    constructor(private readonly userService: UserService,
-        private readonly authService: AuthService) { }
+  constructor(private readonly userService: UserService) { }
+  @Mutation(() => User)
+  async createUser(@Args('createUserInput') createUserInput: CreateUserInput) {
+    return await this.userService.create(createUserInput);
+  }
 
+  @Query(() => User, { name: 'user', nullable: true })
+  @UseGuards(GqlAuthGuard, RolesGuard)
+  @Roles(Role.Admin)
+  getUser(@CurrentUser() user: User): Promise<User> {
+    return this.userService.getUser(user.id);
+  }
 
+  @Query(() => User, { name: 'User' })
+  async findUserById(email: string) {
+    return await this.userService.findUserByEmail(email);
+  }
 
-    @Mutation(() => UserEntity)
-    async createUser(@Args('createUserInput') createUserInput: CreateUserInput) {
-        return await this.userService.create(createUserInput);
-    }
+  @Query(() => User, { name: 'User' })
+  async findAllUsers() {
+    return await this.userService.findAll();
+  }
 
-    @Query(() => UserEntity, { name: 'user', nullable: true })
-    @UseGuards(GqlAuthGuard)
-    getUser(@CurrentUser() user: UserEntity, @Args() getUserArgs: GetUserArgs): Promise<UserEntity> {
-        return this.userService.getUser(getUserArgs);
-    }
-
-    @Mutation(() => LoginResponse)
-    async login(@Args('loginUserInput') loginUserInput: LoginUserInput) {
-        return await this.authService.login(loginUserInput)
-    }
-
-    @Query(() => UserEntity, { name: 'User' })
-    async findUserById(email: string) {
-        return await this.userService.findUserByEmail(email);
-    }
-
-    @Query(() => UserEntity, { name: 'User' })
-    async findAllUsers() {
-        return await this.userService.findAll();
-    }
-
-    @ResolveReference()
-    resolveReference(reference: { __typename: string, id: string }): Promise<UserEntity> {
-        return this.userService.findOne(+reference.id)
-    }
+  @ResolveReference()
+  resolveReference(reference: {
+    __typename: string;
+    id: number;
+  }): Promise<User> {
+    return this.userService.findUserById(reference.id);
+  }
 }

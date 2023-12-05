@@ -1,15 +1,14 @@
-import { Field, ID, InputType, ObjectType } from '@nestjs/graphql';
-import { OrderEntity } from 'apps/order/src/entities/order.entity';
+import { Field, InputType, ObjectType } from '@nestjs/graphql';
 
-@InputType()
+@ObjectType()
+@InputType('CreateUserInput')
 export class CreateUserInput {
+  @Field()
+  email: string;
 
-    @Field()
-    email: string
+  @Field()
+  password: string;
 
-    @Field()
-    password: string;
-
-    @Field()
-    name: string;
+  @Field()
+  name: string;
 }

@@ -1,6 +1,5 @@
 export const authContext = ({ req }) => {
-    if (req.headers?.authorization) {
-        return { token: req.headers.authorization }
-    }
-
+  if (req.headers?.authorization) {
+    return { token: req.headers.authorization };
+  }
 };

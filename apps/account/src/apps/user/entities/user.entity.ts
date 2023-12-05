@@ -1,33 +1,49 @@
-import { Directive, Field, ID, ObjectType } from '@nestjs/graphql';
-import { OrderEntity } from 'apps/order/src/entities/order.entity';
-import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
+import {
+  Directive,
+  Field,
+  ID,
+  ObjectType,
+  registerEnumType,
+} from '@nestjs/graphql';
+import { Cart } from 'apps/cart/src/entities/cart.entity';
+import { Order } from 'apps/order/src/entities/order.entity';
+
+export enum Role {
+  User = 'USER',
+  Guest = 'GUEST',
+  Admin = 'ADMIN',
+}
+
+registerEnumType(Role, {
+  name: 'Role',
+  description: 'User roles: [admin, user, guest]',
+});
 
 @ObjectType()
-@Entity('user')
+@Directive('@shareable')
 @Directive('@key(fields: "id")')
-export class UserEntity {
+export class User {
+  @Field(() => ID)
+  id: number;
 
-    @Field(() => ID)
-    @PrimaryGeneratedColumn()
-    id: number;
+  @Field()
+  email: string;
 
-    @Field()
-    @Column()
-    email: string
+  @Field()
+  password: string;
 
-    @Field()
-    @Column()
-    password: string;
+  @Field()
+  name: string;
 
-    @Field()
-    @Column()
-    name: string;
+  @Field({ nullable: true })
+  customerId?: string;
 
-    @Field()
-    @Column({ default: true })
-    isAdmin: boolean;
+  @Field()
+  role: Role;
 
-    @Field(() => [OrderEntity])
-    @OneToMany(() => OrderEntity, order => order.user)
-    orders: OrderEntity[];
+  @Field(() => [Order], { nullable: true })
+  orders?: Order[];
+
+  @Field(() => Cart, { nullable: true })
+  cart?: Cart;
 }

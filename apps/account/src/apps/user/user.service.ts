@@ -1,19 +1,20 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { CreateUserInput } from './dto/create-user.input';
 import { InjectRepository } from '@nestjs/typeorm';
-import { UserEntity } from './entities/user.entity';
 import { Repository } from 'typeorm';
-import { genSaltSync, hashSync, compareSync } from 'bcryptjs'
-import { GetUserArgs } from './dto/get-user.args';
+import { genSaltSync, hashSync } from 'bcryptjs';
+import { User, Role } from 'libs/db/typeorm/typeorm/user.entity';
+import StripeService from './stripe/stripe.service';
 
 @Injectable()
 export class UserService {
+  constructor(
+    @InjectRepository(User)
+    private readonly userRepository: Repository<User>,
+    private readonly stripeService: StripeService
+  ) { }
 
-  constructor(@InjectRepository(UserEntity)
-  private readonly userRepository: Repository<UserEntity>) { }
-
-  async create(createUserInput: CreateUserInput) {
-
+  async create(createUserInput: CreateUserInput): Promise<User> {
     const isUserExist = await this.findUserByEmail(createUserInput.email);
     if (isUserExist) {
       throw new UnauthorizedException('User with such email is already exists');
@@ -24,26 +25,34 @@ export class UserService {
     const newUser: CreateUserInput = {
       email: createUserInput.email,
       name: createUserInput.name,
-      password: hashSync(createUserInput.password, salt)
-    }
-    return await this.userRepository.save({ ...newUser })
+      password: hashSync(createUserInput.password, salt),
+    };
+    const customerId = (await this.stripeService.createCustomer(newUser.name, newUser.email)).id;
+    return await this.userRepository.save({ ...newUser, role: Role.Admin, customerId });
   }
 
   async findAll() {
-    return await this.userRepository.find();
+    const res = await this.userRepository.find();
+    return res;
   }
 
-  findOne(id: number) {
-    return this.userRepository.findOneBy({ id })
+  async findUserById(id: number): Promise<User> {
+    return await this.userRepository.findOneBy({ id });
   }
 
   async findUserByEmail(email: string) {
-    return await this.userRepository.findOneBy({ email })
+    const res = await this.userRepository.findOne({
+      where: { email },
+      relations: ['orders'],
+    });
+    return res;
   }
 
-  public getUser(getUserArgs: GetUserArgs): Promise<UserEntity> {
-    return this.userRepository.findOneBy({ id: +getUserArgs.userId });
+  async getUser(id: number): Promise<User> {
+    const res = await this.userRepository.findOne({
+      where: { id },
+      relations: ['orders', 'cart'],
+    });
+    return res;
   }
-
 }
-

@@ -1,29 +1,23 @@
 import { Directive, Field, ID, ObjectType } from '@nestjs/graphql';
-import { UserEntity } from 'apps/account/src/apps/user/entities/user.entity';
-import { CartEntity } from 'apps/cart/src/entities/cart.entity';
-import { Column, Entity, JoinColumn, ManyToOne, OneToOne, PrimaryGeneratedColumn } from 'typeorm';
+import { User } from 'apps/account/src/apps/user/entities/user.entity';
+import { Cart } from 'apps/cart/src/entities/cart.entity';
 
 @ObjectType()
-@Entity('orders')
 @Directive('@key(fields: "id")')
-export class OrderEntity {
+@Directive('@shareable')
+export class Order {
+  @Field(() => ID)
+  id: number;
 
-    @Field(() => ID)
-    @PrimaryGeneratedColumn()
-    id: number;
+  @Field()
+  orderStatus: boolean;
 
-    @Field()
-    @Column()
-    orderStatus: boolean;
+  @Field()
+  totalAmount: number;
 
-    @Field()
-    @Column()
-    totalAmount: number;
+  @Field(() => User)
+  user: User;
 
-    @OneToOne(() => CartEntity)
-    @JoinColumn()
-    Cart: CartEntity;
-
-    @ManyToOne(() => UserEntity, user => user.orders)
-    user: UserEntity;
+  @Field(() => Cart)
+  Cart?: Cart;
 }
